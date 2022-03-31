@@ -23,7 +23,7 @@ test_batch_size = 8
 size_h = 224
 size_w = 224
 
-modelname = 'mimogan'
+modelname = 'BENIMmimogan'
 model = keras.models.load_model(modelname + '.h5')
 
 model_sa = keras.Model(inputs = model.input[1], outputs = model.output[1])

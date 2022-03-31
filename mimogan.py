@@ -5,22 +5,35 @@ Created on Sat Aug  8 15:46:03 2020
 @author: Ran Song
 """
 
-# import os
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow import keras
 import tensorflow_addons as tfa
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
+
+# gpus = tf.config.list_physical_devices('GPU')
+# if gpus:
+#     try:
+#         # Currently, memory growth needs to be the same across GPUs
+#         for gpu in gpus:
+#           tf.config.experimental.set_memory_growth(gpu, True)
+#         logical_gpus = tf.config.list_logical_devices('GPU')
+#         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+#     except RuntimeError as e:
+#         # Memory growth must be set before GPUs have been initialized
+#         print(e)
 
 
 train_data_dir = './salicon/images'
 label_data_dir = './salicon/maps'
-object_data_dir = './modelnet40v4'
+object_data_dir = './ModelNet40'
 
 nb_train_samples = 10000
-batch_size = 8
+batch_size = 2
 size_h = 224
 size_w = 224
 alpha1 = 0.2
@@ -31,6 +44,9 @@ alpha5 = 0.01
 
 
 def discriminator():
+
+     print("Discrimitor Start")
+
     
      indis = keras.Input(shape=(size_h, size_w, 3))
      
@@ -57,11 +73,17 @@ def discriminator():
      x = keras.layers.Flatten()(x)
      outdis = keras.layers.Dense(1, activation='sigmoid')(x)
      dis = keras.Model(inputs = indis, outputs = outdis)
+
+     print("Discrimitor Finish")
+
      return dis   
  
 
 def little_unet():
- 
+    
+    print("little_unet Start")
+
+
     inp1 = keras.Input(shape=(size_h, size_w, 3),name='object_input')
     inp2 = keras.Input(shape=(size_h, size_w, 3),name='saliency_input')
     vgg16 = keras.applications.VGG16(include_top=False, weights='imagenet')
@@ -190,6 +212,9 @@ def little_unet():
     model = keras.Model(inputs=[inp1,inp2], outputs=[yyy,conv10,conv10xx,conv10yy,conv10yyg]) 
     
     model.summary()
+    
+    print("little_unet Finish")
+
     return model
 
 
@@ -206,6 +231,9 @@ model = little_unet()
 
 def generate_generator(gen, dir1, dir2, dir3, b_size, img_height,img_width):
     
+    print("generate_generator Start")
+
+
     genX1 = gen.flow_from_directory(
     dir1,
     target_size=(img_height, img_width),
@@ -236,13 +264,21 @@ def generate_generator(gen, dir1, dir2, dir3, b_size, img_height,img_width):
             X3i = genX3.next()
             if len(X2i) == b_size:
                 yield [X1i[0], X2i], [X1i[1], X3i, np.ones((b_size,1)), np.zeros((b_size,1)), np.ones((b_size,1))]
+
+    print("generate_generator Finish")
+
                 
-           
+print("Kod 1")
+          
 learning_rate = 0.001
 momentum = 0.9
 sgd = keras.optimizers.SGD(lr=learning_rate, momentum = momentum)
 
+print("Kod 2")
+
 change_lr = keras.callbacks.LearningRateScheduler(scheduler)
+
+print("Kod 3")
 
 losses = {"category_output": "categorical_crossentropy",
           "saliency_output": "mean_squared_error",
@@ -257,7 +293,11 @@ metrics = {"saliency_output": "mae",
 
 # model = keras.utils.multi_gpu_model(smodel,gpus=2)    
 model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=sgd)
+print("Kod 3.1")
+
 generator = generate_generator(image_datagen,object_data_dir,train_data_dir,label_data_dir,batch_size,size_h,size_w)
+print("Kod 3.2")
+
 history = model.fit_generator(
     generator,
     steps_per_epoch=int(np.floor(nb_train_samples/batch_size)),
@@ -265,8 +305,18 @@ history = model.fit_generator(
     verbose=2,
     callbacks=[change_lr])
 
+print("Kod 4")
+
+
 print(history.history.keys())
-model.save('mimogan.h5', include_optimizer=False)
+
+print("Kod 5")
+
+model.save('BENIMmimogan.h5', include_optimizer=False)
+
+print("Kod 6")
+
+
 plt.plot(history.history['loss'])
 plt.title('model loss')
 plt.ylabel('loss')

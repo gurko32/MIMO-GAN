@@ -13,7 +13,7 @@ function [cor_score,p_score,auc_score] = sa_trans_eval(shapefolder, imagefolder,
 
 % Copyright (c) 2020 Ran Song
 
- % load results_sa
+%load('mimogan.mat', 'results_sa') % use run_test 
 
 outputSize = 224;
 nViews = 3; % The 3DVA dataset provides the fixation maps at 3 views for each 3D object.
@@ -37,7 +37,7 @@ for i=3:num_shape
     yn2=min(mesh.V(2,:));
     zn1=max(mesh.V(3,:));
     zn2=min(mesh.V(3,:));
-    bbox=sqrt((xn1-xn2).^2+(yn1-yn2).^2+(zn1-zn2).^2);
+    bbox=sqrt((xn1-xn2).^2+(yn1-yn2).^2+(zn1-zn2).^2); %Put in bounding box
     
     mesh.V(1,:)=double(mesh.V(1,:)-0.5*(xn1+xn2));
     mesh.V(2,:)=double(mesh.V(2,:)-0.5*(yn1+yn2));
@@ -47,14 +47,14 @@ for i=3:num_shape
     % For efficiency, we operate on a simplified mesh
     if length(mesh.F)>20000
         [p,t] = perform_mesh_simplification(mesh.V',mesh.F',20000);
-        knng=knnsearch(p,mesh.V');
+        knng=knnsearch(p,mesh.V');      %yeni vertexler eski vertexlerde nereye denk geliyor onu buluyor 
     else
         p=mesh.V';
         t=mesh.F';
         knng=1:length(mesh.V);
     end
     
-    W=density(t,p);
+    W=density(t,p); %1x11166
     
     % Initialise the saliency of the invisible vertices as a fixed value of 1.1 for a fair evaluation
     % while fine-tuning it shape by shape will lead to a significantly better performance 
@@ -66,7 +66,7 @@ for i=3:num_shape
     
     for j = 1:nViews
         image_name = [imagefolder '\' imagedir(imageidxs(j)+2).name];
-        ims(j,:,:,:) = imread(image_name);
+        ims(j,:,:,:) = imread(image_name);  %2d versions of our 3d meshes 3DVA
     end
     
     % Load the 2D saliency maps produced by the MIMO-GAN
@@ -140,19 +140,19 @@ for i=3:num_shape
         y2=y2-min(y2);% y2 is row;
         
         
-        [vpy,vpx,vpz]=sph2cart(pi*viewpoints(ii,1)/180,pi*viewpoints(ii,2)/180,bbox);
+        [vpy,vpx,vpz]=sph2cart(pi*viewpoints(ii,1)/180,pi*viewpoints(ii,2)/180,bbox); %To cartesian
         vpy=-vpy;
-        visibility_v = mark_visible_vertices(p,t,[vpx,vpy,vpz]);
+        visibility_v = mark_visible_vertices(p,t,[vpx,vpy,vpz]); %mark visible vertices
         
         [impointsx,impointsy]=meshgrid(1:bb,1:aa);
         impoints=[impointsx(:) impointsy(:)];
         
         visible=find(visibility_v~=0);
         
-        vx2=x2(visible);
+        vx2=x2(visible); %choses visible vertices x
         vy2=y2(visible);
         x2ddd=[vx2(:) vy2(:) ];
-        ind_cor = knnsearch(impoints,x2ddd);
+        ind_cor = knnsearch(impoints,x2ddd); % finds where visible vertices are on the image 
         
         % Assign the saliency of a pixel to a visible 3D vertex
         for jj=1:length(visible)
@@ -166,7 +166,7 @@ for i=3:num_shape
         
         % For efficiency, we use a simplified mesh and thus we have to map the saliency back to the original one.
         imsvsa(:,ii)=imsvsas(knng,ii);
-        msa(:,ii)=imsvsa(:,ii);
+        msa(:,ii)=imsvsa(:,ii);     %exactly what it says up top
         
         % As suggested by the 3DVA paper, we create 4 versions of the saliency map (0, 10, 40 and 120 smoothing iterations) 
         % and select the top-performing one for each view of each 3D object.
